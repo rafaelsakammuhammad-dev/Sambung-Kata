@@ -1,0 +1,122 @@
+-- Deobfuscated Source Code
+-- Note: Logic is structurally represented based on raw bytecode and string data.
+
+local tonumber = tonumber
+local string_byte = string.byte
+local string_char = string.char
+local string_sub = string.sub
+local string_gsub = string.gsub
+local string_rep = string.rep
+local table_concat = table.concat
+local table_insert = table.insert
+local math_ldexp = math.ldexp
+local getfenv = getfenv or function() return _ENV end
+local setmetatable = setmetatable
+local pcall = pcall
+local select = select
+local unpack = unpack or table.unpack
+
+-- Network & Data Endpoints
+local ENDPOINTS = {
+    WORD_DATABASE = "https://raw.githubusercontent.com/enveyxe/KBI/refs/heads/main/words.txt",
+    SAMBUNG_KATA_1 = "https://raw.githubusercontent.com/rafaelsakammuhamad-dev/Sambung-Kata/refs/heads/main/words.txt",
+    SAMBUNG_KATA_2 = "https://raw.githubusercontent.com/rafaelsakammuhamad-dev/Sambung-Kata/refs/heads/main/words.2.txt",
+    BLACKLIST = "https://raw.githubusercontent.com/rafaelsakammuhamad-dev/Sambung-Kata/refs/heads/main/blacklist.txt",
+    WHITELIST = "https://raw.githubusercontent.com/rafaelsakammuhamad-dev/Sambung-Kata/refs/heads/main/whitelist.txt",
+    PENDING_CONFLICTS = "https://raw.githubusercontent.com/rafaelsakammuhamad-dev/Sambung-Kata/refs/heads/main/konflik_pending.txt",
+    WEBHOOK_PRIMARY = "https://discord.com/api/webhooks/148136215085261533/gZFp8_2DrJNlw1wK4lqpP5im2Ep5t4bXH3L3jOqUs0N8gU2MxJYPKQx6g-dUcJwHjrU",
+    WEBHOOK_SECONDARY = "https://discord.com/api/webhooks/148354251570859636/fTu137w74UVG1wHhvyaJQOKHm-K1V_ZzMtxK1lAWVy47uBq4hWDjATESAbaGFJxSOX",
+    WEBHOOK_TERTIARY = "https://discord.com/api/webhooks/14835424510701734/b_sN5g0yJKl9PHf8FaGvNqdhVX8LbegKw6X1wpnuFivah5STC1KPrj84qb3DynsSEDRM"
+}
+
+-- UI Theme & Palette Config
+local THEME = {
+    HOME = Color3.fromRGB(0, 0, 0),
+    BG_DARKEST = Color3.fromRGB(24, 24, 24),
+    BG_DARK = Color3.fromRGB(30, 30, 30),
+    BG_MEDIUM = Color3.fromRGB(38, 38, 38),
+    BG_LIGHT = Color3.fromRGB(45, 45, 45),
+    BG_HOVER = Color3.fromRGB(55, 55, 55),
+    TEAL = Color3.fromRGB(0, 170, 170),
+    TEAL_DIM = Color3.fromRGB(0, 100, 100),
+    TEAL_BRIGHT = Color3.fromRGB(0, 220, 220),
+    GREEN = Color3.fromRGB(40, 180, 40),
+    RED = Color3.fromRGB(200, 50, 50),
+    YELLOW = Color3.fromRGB(220, 220, 50),
+    WHITE = Color3.fromRGB(255, 255, 255),
+    TEXT_NORMAL = Color3.fromRGB(220, 220, 220),
+    TEXT_MUTED = Color3.fromRGB(150, 150, 150),
+    TAB_INACTIVE = Color3.fromRGB(100, 100, 100)
+}
+
+-- Services & Local Player Setup
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Anti-AFK Handler
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    task.wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+
+-- Main Interface Creation
+local function BuildUI()
+    if CoreGui:FindFirstChild("KamusDiscordGUI") then
+        CoreGui.KamusDiscordGUI:Destroy()
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "KamusDiscordGUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 450, 0, 300)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.BackgroundColor3 = THEME.BG_DARK
+    MainFrame.Active = true
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = MainFrame
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Thickness = 1
+    UIStroke.Color = THEME.TEAL
+    UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    UIStroke.Parent = MainFrame
+
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Name = "Title"
+    TitleLabel.Text = "KABI Tools - RUSH HUB v1.4"
+    TitleLabel.TextColor3 = THEME.WHITE
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextSize = 14
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Parent = MainFrame
+
+    return ScreenGui
+end
+
+-- Initialize Script Engine
+task.spawn(function()
+    print("Loading modules...")
+    print("Fetching KBI database...")
+    print("Parsing dictionary...")
+    print("Almost ready...")
+    print("Done!")
+    BuildUI()
+end)
