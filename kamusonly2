@@ -1,0 +1,298 @@
+--[[
+    KAMUS ONLY - Sambung Kata
+    Database: 212.350 kata
+]]
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local WORDS_URL =
+    "https://raw.githubusercontent.com/rafaelsakammuhammad-dev/Sambung-Kata/main/words2.txt"
+
+local MAX_RESULTS = 200
+
+-- =========================
+-- DATABASE
+-- =========================
+
+local WordDatabase = {}
+local PrefixIndex = {}
+
+local function LoadDatabase()
+    local success, responseData = pcall(function()
+        return game:HttpGet(WORDS_URL)
+    end)
+
+    if not success or type(responseData) ~= "string" then
+        return false, "Gagal mengambil database"
+    end
+
+    table.clear(WordDatabase)
+    table.clear(PrefixIndex)
+
+    local total = 0
+
+    for word in responseData:gmatch("[^\r\n]+") do
+        word = word:lower():gsub("^%s+", ""):gsub("%s+$", "")
+
+        if word ~= "" then
+            total += 1
+            WordDatabase[total] = word
+
+            -- Index 1 sampai 5 huruf
+            for length = 1, math.min(5, #word) do
+                local prefix = word:sub(1, length)
+
+                if not PrefixIndex[prefix] then
+                    PrefixIndex[prefix] = {}
+                end
+
+                table.insert(PrefixIndex[prefix], word)
+            end
+        end
+
+        -- Kasih waktu Roblox bernapas setiap beberapa ribu kata
+        if total % 3000 == 0 then
+            task.wait()
+        end
+    end
+
+    return true, total
+end
+
+-- =========================
+-- GUI
+-- =========================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "KamusOnly"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.fromOffset(430, 520)
+Main.Position = UDim2.new(0.5, -215, 0.5, -260)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Main.BorderSizePixel = 0
+Main.Parent = gui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = Main
+
+-- =========================
+-- TITLE
+-- =========================
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 38)
+Title.Position = UDim2.fromOffset(10, 8)
+Title.BackgroundTransparency = 1
+Title.Text = "KAMUS ONLY"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 21
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Main
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 20)
+Status.Position = UDim2.fromOffset(10, 45)
+Status.BackgroundTransparency = 1
+Status.Text = "Loading database..."
+Status.TextColor3 = Color3.fromRGB(150, 150, 150)
+Status.TextSize = 12
+Status.Font = Enum.Font.Gotham
+Status.Parent = Main
+
+-- =========================
+-- SEARCH BOX
+-- =========================
+
+local Search = Instance.new("TextBox")
+Search.Size = UDim2.new(1, -20, 0, 42)
+Search.Position = UDim2.fromOffset(10, 72)
+Search.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Search.BorderSizePixel = 0
+Search.Text = ""
+Search.PlaceholderText = "Masukkan awalan kata..."
+Search.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+Search.TextColor3 = Color3.new(1, 1, 1)
+Search.TextSize = 15
+Search.Font = Enum.Font.Gotham
+Search.ClearTextOnFocus = false
+Search.Parent = Main
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 7)
+SearchCorner.Parent = Search
+
+-- =========================
+-- RESULT AREA
+-- =========================
+
+local Results = Instance.new("ScrollingFrame")
+Results.Size = UDim2.new(1, -20, 1, -130)
+Results.Position = UDim2.fromOffset(10, 125)
+Results.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
+Results.BorderSizePixel = 0
+Results.ScrollBarThickness = 5
+Results.CanvasSize = UDim2.new(0, 0, 0, 0)
+Results.Parent = Main
+
+local ResultLayout = Instance.new("UIListLayout")
+ResultLayout.Padding = UDim.new(0, 2)
+ResultLayout.Parent = Results
+
+-- =========================
+-- FUNCTIONS
+-- =========================
+
+local function ClearResults()
+    for _, object in ipairs(Results:GetChildren()) do
+        if object:IsA("TextLabel") then
+            object:Destroy()
+        end
+    end
+end
+
+local function ShowResults(text)
+    ClearResults()
+
+    text = text:lower():gsub("%s+", "")
+
+    if text == "" then
+        Status.Text = "Masukkan awalan kata"
+        return
+    end
+
+    local list = PrefixIndex[text]
+
+    if not list then
+        Status.Text = "0 hasil"
+        return
+    end
+
+    local amount = math.min(#list, MAX_RESULTS)
+
+    for i = 1, amount do
+        local Item = Instance.new("TextLabel")
+
+        Item.Size = UDim2.new(1, -10, 0, 27)
+        Item.BackgroundTransparency = 1
+        Item.Text = list[i]
+        Item.TextColor3 = Color3.new(1, 1, 1)
+        Item.TextSize = 14
+        Item.Font = Enum.Font.Gotham
+        Item.TextXAlignment = Enum.TextXAlignment.Left
+        Item.Parent = Results
+    end
+
+    if #list > MAX_RESULTS then
+        Status.Text =
+            tostring(#list) ..
+            " hasil | menampilkan " ..
+            tostring(MAX_RESULTS)
+    else
+        Status.Text = tostring(#list) .. " hasil"
+    end
+
+    Results.CanvasSize = UDim2.fromOffset(
+        0,
+        ResultLayout.AbsoluteContentSize.Y + 10
+    )
+end
+
+-- =========================
+-- LOAD
+-- =========================
+
+task.spawn(function()
+
+    Status.Text = "Mengambil database..."
+
+    local success, result = LoadDatabase()
+
+    if not success then
+        Status.Text = "DATABASE ERROR"
+        warn("[KAMUS ONLY] " .. tostring(result))
+        return
+    end
+
+    Status.Text =
+        "Database siap | " ..
+        tostring(result) ..
+        " kata"
+
+    print(
+        "[KAMUS ONLY] Database berhasil dimuat:",
+        result,
+        "kata"
+    )
+end)
+
+-- =========================
+-- SEARCH EVENT
+-- =========================
+
+Search:GetPropertyChangedSignal("Text"):Connect(function()
+    if next(PrefixIndex) then
+        ShowResults(Search.Text)
+    end
+end)
+
+ResultLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Results.CanvasSize = UDim2.fromOffset(
+        0,
+        ResultLayout.AbsoluteContentSize.Y + 10
+    )
+end)
+
+-- =========================
+-- DRAG GUI
+-- =========================
+
+local dragging = false
+local dragStart
+local startPosition
+
+Title.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+        dragStart = input.Position
+        startPosition = Main.Position
+    end
+end)
+
+Title.InputEnded:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = false
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+
+    if not dragging then
+        return
+    end
+
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local delta = input.Position - dragStart
+
+    Main.Position = UDim2.new(
+        startPosition.X.Scale,
+        startPosition.X.Offset + delta.X,
+        startPosition.Y.Scale,
+        startPosition.Y.Offset + delta.Y
+    )
+end)
